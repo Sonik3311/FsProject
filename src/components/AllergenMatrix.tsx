@@ -1,4 +1,5 @@
 import Table from '@mui/material/Table'
+import TableContainer from '@mui/material/TableContainer'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
@@ -24,28 +25,30 @@ function dishAllergens(dish: Dish, ingredients: Ingredient[]): string[] {
 
 export function AllergenMatrix({ dishes, ingredients }: AllergenMatrixProps) {
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Блюдо</TableCell>
-          {ALLERGENS.map((a) => (
-            <TableCell key={a}>{a}</TableCell>
-          ))}
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {dishes.map((dish) => {
-          const present = new Set(dishAllergens(dish, ingredients))
-          return (
-            <TableRow key={dish.id}>
-              <TableCell>{dish.name}</TableCell>
-              {ALLERGENS.map((a) => (
-                <TableCell key={a}>{present.has(a) ? '✓' : ''}</TableCell>
-              ))}
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <TableContainer>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Блюдо</TableCell>
+            {ALLERGENS.map((a) => (
+              <TableCell key={a}>{a}</TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {dishes.map((dish) => {
+            const present = new Set(dishAllergens(dish, ingredients))
+            return (
+              <TableRow key={dish.id}>
+                <TableCell>{dish.name}</TableCell>
+                {ALLERGENS.map((a) => (
+                  <TableCell key={a}>{present.has(a) ? '✓' : ''}</TableCell>
+                ))}
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
   )
 }

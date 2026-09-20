@@ -1,4 +1,5 @@
 import Table from '@mui/material/Table'
+import TableContainer from '@mui/material/TableContainer'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
@@ -12,29 +13,31 @@ interface IngredientTableProps {
 
 export function IngredientTable({ ingredients }: IngredientTableProps) {
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Название</TableCell>
-          <TableCell>Единица</TableCell>
-          <TableCell>Цена за единицу</TableCell>
-          <TableCell>Аллергены</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {ingredients.map((ing) => (
-          <TableRow key={ing.id}>
-            <TableCell>{ing.name}</TableCell>
-            <TableCell>{ing.unit}</TableCell>
-            <TableCell>{ing.pricePerUnit} ₽</TableCell>
-            <TableCell>
-              {ing.allergens.map((a) => (
-                <Chip key={a} label={a} size="small" />
-              ))}
-            </TableCell>
+    <TableContainer>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Название</TableCell>
+            <TableCell>Единица</TableCell>
+            <TableCell>Цена за единицу</TableCell>
+            <TableCell>Аллергены</TableCell>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          {ingredients.map((ing) => (
+            <TableRow key={ing.id}>
+              <TableCell>{ing.name}</TableCell>
+              <TableCell>{ing.unit}</TableCell>
+              <TableCell>{ing.pricePerUnit} ₽</TableCell>
+              <TableCell>
+                {ing.allergens.map((a) => (
+                  <Chip key={a} label={a} size="small" />
+                ))}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   )
 }

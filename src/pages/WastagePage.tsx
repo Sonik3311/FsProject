@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import { ingredients, wastage } from '../data/mock'
 import { WastageTable } from '../components/WastageTable'
 import { WastageForm } from '../components/WastageForm'
+import { PageHeader } from '../components/PageHeader'
 import type { WastageEntry } from '../types'
 
 export function WastagePage() {
@@ -21,8 +21,7 @@ export function WastagePage() {
 
   return (
     <Box>
-      <Typography variant="h5">Журнал списаний</Typography>
-      <Typography variant="subtitle1">Новое списание</Typography>
+      <PageHeader title="Журнал списаний" subtitle="Учёт порчи, брака и истечения срока" />
       <WastageForm ingredients={ingredients} onSubmit={handleSubmit} />
       <Divider sx={{ my: 3 }} />
       <WastageTable entries={entries} ingredients={ingredients} />

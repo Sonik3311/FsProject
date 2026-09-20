@@ -26,7 +26,7 @@ export function WastageForm({ ingredients, onSubmit }: WastageFormProps) {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: 320 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: { xs: '100%', sm: 320 } }}>
       <TextField select label="Ингредиент" value={ingredientId} onChange={(e) => setIngredientId(Number(e.target.value))}>
         {ingredients.map((i) => (
           <MenuItem key={i.id} value={i.id}>

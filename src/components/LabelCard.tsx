@@ -14,7 +14,19 @@ export function LabelCard({ dish, ingredients }: LabelCardProps) {
   const allergens = [...new Set(ingredients.filter((i) => ids.has(i.id)).flatMap((i) => i.allergens))]
 
   return (
-    <Card variant="outlined" sx={{ width: 300, p: 2 }}>
+    <Card
+      elevation={0}
+      sx={{
+        width: { xs: '100%', sm: 300 },
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'grey.400',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+      }}
+    >
       <CardContent>
         <Typography variant="h6" align="center">
           {dish.name}

@@ -1,12 +1,12 @@
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import { dishes, ingredients } from '../data/mock'
 import { AllergenMatrix } from '../components/AllergenMatrix'
+import { PageHeader } from '../components/PageHeader'
 
 export function AllergensPage() {
   return (
     <Box>
-      <Typography variant="h5">Матрица аллергенов</Typography>
+      <PageHeader title="Матрица аллергенов" subtitle="Аллергены по блюдам" />
       <AllergenMatrix dishes={dishes} ingredients={ingredients} />
     </Box>
   )

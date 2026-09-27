@@ -69,21 +69,76 @@ npm run lint     # проверить код линтером (oxlint)
 
 ## Запуск backend
 
-Требования: Python 3.11+, запущенный PostgreSQL (например, через Docker: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cook_assistant postgres:16-alpine`).
+Требования: Python 3.11+ и запущенный PostgreSQL (см. «Подготовка БД» ниже).
+
+### 1. Подготовка БД (PostgreSQL)
+
+```bash
+# создать и запустить контейнер с БД (имя БД — cook_assistant, пароль — postgres)
+docker run -d --name cook-db -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=cook_assistant \
+  postgres:16-alpine
+```
+Проверка, что БД доступна:
+
+```bash
+pg_isready -h 127.0.0.1 -p 5432
+```
+
+### 2. Установка зависимостей и настройка
 
 ```bash
 cd backend
 
-# 1. Создать виртуальное окружение и установить зависимости
+# создать виртуальное окружение и установить зависимости
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Настроить подключение к БД
+# создать файл настроек из примера
 cp .env.example .env
-#    отредактируйте .env: укажите DATABASE_URL, порт и т.д.
+```
 
-# 3. Запустить сервер (по умолчанию http://127.0.0.1:8000)
+Отредактируйте `backend/.env` под вашу БД:
+
+```bash
+# строка подключения: postgresql+psycopg://<пользователь>:<пароль>@<хост>:<порт>/<имя_базы>
+# для Docker-варианта подойдёт значение по умолчанию
+DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/cook_assistant
+```
+
+### 3. Создание таблиц
+
+Таблицы создаются автоматически при запуске сервера (см. `backend/app/main.py`, событие `startup` → `Base.metadata.create_all`). Отдельных миграций не требуется:
+
+- `ingredients` — ингредиенты
+- `dishes` — блюда
+- `dish_ingredients` — состав блюда (связующая таблица)
+- `wastage` — журнал списаний
+
+Проверить создание таблиц:
+
+```bash
+# в отдельном терминале
+docker exec -it cook-db psql -U postgres -d cook_assistant -c "\dt"
+```
+
+Если нужно сбросить схему (удалит ВСЕ данные):
+
+```bash
+docker exec -it cook-db psql -U postgres -d cook_assistant -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+```
+
+После этого перезапустите сервер — таблицы создадутся заново.
+
+### 4. Запуск сервера
+
+```bash
+cd backend
+source .venv/bin/activate
+
+# по умолчанию http://127.0.0.1:8000
 uvicorn app.main:app --reload
 ```
 
@@ -92,7 +147,7 @@ uvicorn app.main:app --reload
 - Swagger-документация API: http://127.0.0.1:8000/docs
 - Проверка здоровья: http://127.0.0.1:8000/api/health
 
-Таблицы в БД создаются автоматически при старте (для продакшена лучше подключить миграции Alembic).
+> Для продакшена вместо автозоздания таблиц лучше использовать миграции Alembic.
 
 ### Доступные API-маршруты
 

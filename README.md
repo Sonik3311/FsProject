@@ -108,3 +108,70 @@ uvicorn app.main:app --reload
 | POST | `/api/wastage` | записать списание |
 
 Все параметры подключения к БД и серверу задаются в `.env` (см. `.env.example` — там только примеры без секретов; сам файл `.env` в git не попадает).
+
+## Сущности и связи (схема БД)
+
+Проект состоит из четырёх сущностей. Связи между ними:
+
+```
+ingredients 1 ──── * dish_ingredients * ──── 1 dishes
+    │                                              │
+    │ 1                                             │
+    │                                              │
+    ▼                                              │
+ wastage                                          (блюдо из ингредиентов)
+```
+
+- **Ingredient** (ингредиент) — справочник продуктов с ценами и аллергенами.
+- **Dish** (блюдо) — позиция меню.
+- **DishIngredient** (состав блюда) — связующая таблица «многие ко многим» между блюдами и ингредиентами с количеством в составе.
+- **WastageEntry** (списание) — запись о списании продукта (порча, брак, истечение срока).
+
+### ingredients — справочник ингредиентов
+
+| Поле | Тип | Ограничения |
+|---|---|---|
+| `id` | integer (serial) | **PRIMARY KEY** |
+| `name` | varchar(100) | NOT NULL, **UNIQUE** (`uq_ingredient_name`) |
+| `unit` | varchar(10) | NOT NULL (г, шт, л) |
+| `price_per_unit` | float | NOT NULL (цена за единицу) |
+| `allergens` | varchar[] | массив строк (например, `['глютен', 'молоко']`) |
+
+Связи: 1 → * `dish_ingredients` (ингредиент входит во многие блюда), 1 → * `wastage` (по ингредиенту ведётся много списаний).
+
+### dishes — блюда (меню)
+
+| Поле | Тип | Ограничения |
+|---|---|---|
+| `id` | integer (serial) | **PRIMARY KEY** |
+| `name` | varchar(100) | NOT NULL, **UNIQUE** (`uq_dish_name`) |
+
+Связи: 1 → * `dish_ingredients` (у блюда много позиций состава, при удалении блюда состав удаляется — `ON DELETE CASCADE`).
+
+### dish_ingredients — состав блюда (связующая таблица)
+
+| Поле | Тип | Ограничения |
+|---|---|---|
+| `id` | integer (serial) | **PRIMARY KEY** |
+| `dish_id` | integer | NOT NULL, **FOREIGN KEY** → `dishes.id` (`ON DELETE CASCADE`) |
+| `ingredient_id` | integer | NOT NULL, **FOREIGN KEY** → `ingredients.id` |
+| `qty` | float | NOT NULL (количество ингредиента в блюде) |
+
+Дополнительно: **UNIQUE** (`dish_id`, `ingredient_id`) — ингредиент не может быть указан в блюде дважды.
+
+Связи: * → 1 `dishes`, * → 1 `ingredients`. Обеспечивает связь «многие ко многим» между блюдом и ингредиентом.
+
+### wastage — журнал списаний
+
+| Поле | Тип | Ограничения |
+|---|---|---|
+| `id` | integer (serial) | **PRIMARY KEY** |
+| `ingredient_id` | integer | NOT NULL, **FOREIGN KEY** → `ingredients.id` |
+| `qty` | float | NOT NULL (списанное количество) |
+| `unit` | varchar(10) | NOT NULL (единица на момент списания) |
+| `reason` | varchar(200) | NOT NULL (причина: порча, брак, истечение срока) |
+| `date` | date | NOT NULL (дата списания) |
+
+Связи: * → 1 `ingredients`.
+
+Модели таблиц — в `backend/app/models.py`, схемы валидации — в `backend/app/schemas.py`, бизнес-логика (расчёт себестоимости, матрица аллергенов) — в `backend/app/crud.py`.

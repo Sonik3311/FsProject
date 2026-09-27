@@ -9,9 +9,10 @@ from .database import Base
 
 class Ingredient(Base):
     __tablename__ = "ingredients"
+    __table_args__ = (UniqueConstraint("name", name="uq_ingredient_name"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(100))
     unit: Mapped[str] = mapped_column(String(10))
     price_per_unit: Mapped[float] = mapped_column(Float)
     allergens: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
@@ -21,9 +22,10 @@ class Ingredient(Base):
 
 class Dish(Base):
     __tablename__ = "dishes"
+    __table_args__ = (UniqueConstraint("name", name="uq_dish_name"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(100))
 
     ingredients: Mapped[list["DishIngredient"]] = relationship(
         back_populates="dish",

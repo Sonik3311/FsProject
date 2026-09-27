@@ -16,13 +16,40 @@
 
 ## Технологии
 
-Frontend: React 19, TypeScript, Vite, Material UI (MUI 9), react-router-dom.
+- Frontend (`frontend/`): React 19, TypeScript, Vite, Material UI (MUI 9), react-router-dom.
+- Backend (`backend/`): Python, FastAPI, SQLAlchemy 2, PostgreSQL, Pydantic.
+
+## Структура проекта
+
+```
+Project/
+├── frontend/          # React-приложение (клиент)
+│   ├── src/
+│   │   ├── pages/     # экраны (меню, ингредиенты, аллергены, этикетки, списания)
+│   │   ├── components/ # переиспользуемые компоненты
+│   │   ├── types/     # типы данных
+│   │   └── data/      # mock-данные (пока фронтенд работает без сервера)
+│   └── package.json
+└── backend/           # FastAPI-приложение (API + БД)
+    ├── app/
+    │   ├── main.py        # точка входа, CORS, подключение маршрутов
+    │   ├── config.py      # настройки из переменных окружения / .env
+    │   ├── database.py    # движок SQLAlchemy, сессии, зависимость get_db
+    │   ├── models.py      # SQLAlchemy-модели (Ingredient, Dish, WastageEntry)
+    │   ├── schemas.py     # Pydantic-схемы валидации запросов/ответов
+    │   ├── crud.py        # операции с данными и бизнес-логика (себестоимость, матрица аллергенов)
+    │   └── routes/        # маршруты API: ingredients, dishes, wastage, allergens
+    ├── requirements.txt
+    └── .env.example   # пример настроек без секретов (скопируйте в .env)
+```
 
 ## Запуск frontend
 
 Требования: установленный [Node.js](https://nodejs.org/) (LTS).
 
 ```bash
+cd frontend
+
 # 1. Установить зависимости (только при первом запуске или после изменений в package.json)
 npm install
 
@@ -39,3 +66,45 @@ npm run build    # собрать production-версию (в папку dist/)
 npm run preview  # показать собранную версию локально
 npm run lint     # проверить код линтером (oxlint)
 ```
+
+## Запуск backend
+
+Требования: Python 3.11+, запущенный PostgreSQL (например, через Docker: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cook_assistant postgres:16-alpine`).
+
+```bash
+cd backend
+
+# 1. Создать виртуальное окружение и установить зависимости
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Настроить подключение к БД
+cp .env.example .env
+#    отредактируйте .env: укажите DATABASE_URL, порт и т.д.
+
+# 3. Запустить сервер (по умолчанию http://127.0.0.1:8000)
+uvicorn app.main:app --reload
+```
+
+Проверка:
+
+- Swagger-документация API: http://127.0.0.1:8000/docs
+- Проверка здоровья: http://127.0.0.1:8000/api/health
+
+Таблицы в БД создаются автоматически при старте (для продакшена лучше подключить миграции Alembic).
+
+### Доступные API-маршруты
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/ingredients` | список ингредиентов |
+| POST | `/api/ingredients` | создать ингредиент |
+| GET | `/api/dishes` | список блюд с себестоимостью и аллергенами |
+| POST | `/api/dishes` | создать блюдо из ингредиентов |
+| GET | `/api/dishes/{id}` | карточка блюда |
+| GET | `/api/allergens/matrix` | матрица аллергенов по меню |
+| GET | `/api/wastage` | журнал списаний |
+| POST | `/api/wastage` | записать списание |
+
+Все параметры подключения к БД и серверу задаются в `.env` (см. `.env.example` — там только примеры без секретов; сам файл `.env` в git не попадает).

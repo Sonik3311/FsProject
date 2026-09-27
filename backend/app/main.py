@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
 from .config import settings
+from .crud import ConflictError
 from .database import Base, engine
 from .routes import allergens, dishes, ingredients, wastage
 
@@ -17,6 +18,12 @@ async def integrity_error_handler(_: Request, __: IntegrityError) -> JSONRespons
         status_code=409,
         content={"detail": "Конфликт данных: запись с такими значениями уже существует"},
     )
+
+
+@app.exception_handler(ConflictError)
+async def conflict_error_handler(_: Request, exc: ConflictError) -> JSONResponse:
+    """Бизнес-конфликт связей (например, удаление используемого ингредиента) → HTTP 409."""
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 app.add_middleware(
     CORSMiddleware,

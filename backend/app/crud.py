@@ -8,6 +8,16 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 
 
+class ConflictError(Exception):
+    """Запись не может быть изменена/удалена из-за конфликта связей."""
+
+
+def _apply_updates(obj, data) -> None:
+    """Переносит на объект только те поля схемы, которые переданы (не None)."""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(obj, field, value)
+
+
 # ---------- Ингредиенты ----------
 
 def get_ingredients(db: Session) -> list[models.Ingredient]:
@@ -24,6 +34,32 @@ def create_ingredient(db: Session, data: schemas.IngredientCreate) -> models.Ing
     db.commit()
     db.refresh(ingredient)
     return ingredient
+
+
+def update_ingredient(
+    db: Session,
+    ingredient: models.Ingredient,
+    data: schemas.IngredientUpdate,
+) -> models.Ingredient:
+    _apply_updates(ingredient, data)
+    db.commit()
+    db.refresh(ingredient)
+    return ingredient
+
+
+def delete_ingredient(db: Session, ingredient: models.Ingredient) -> None:
+    in_dishes = db.scalar(
+        select(models.DishIngredient).where(models.DishIngredient.ingredient_id == ingredient.id)
+    )
+    in_wastage = db.scalar(
+        select(models.WastageEntry).where(models.WastageEntry.ingredient_id == ingredient.id)
+    )
+    if in_dishes or in_wastage:
+        raise ConflictError(
+            f"Ингредиент «{ingredient.name}» используется в блюдах или списаниях и не может быть удалён"
+        )
+    db.delete(ingredient)
+    db.commit()
 
 
 # ---------- Блюда ----------
@@ -70,19 +106,49 @@ def dish_to_schema(dish: models.Dish) -> schemas.DishOut:
     )
 
 
-def create_dish(db: Session, data: schemas.DishCreate) -> models.Dish:
-    dish = models.Dish(name=data.name)
-    for item in data.ingredients:
+def _set_dish_ingredients(
+    db: Session,
+    dish: models.Dish,
+    items: list[schemas.DishIngredientIn],
+) -> None:
+    """Заменяет состав блюда целиком (старые позиции удаляются).
+
+    Сначала удаляются старые строки (flush), и только потом вставляются новые —
+    иначе новые строки конфликтуют с уникальным ограничением (dish_id, ingredient_id).
+    """
+    dish.ingredients = []
+    db.flush()
+    for item in items:
         ingredient = db.get(models.Ingredient, item.ingredient_id)
         if ingredient is None:
             raise ValueError(f"Ингредиент {item.ingredient_id} не найден")
         dish.ingredients.append(
             models.DishIngredient(ingredient=ingredient, qty=item.qty)
         )
+
+
+def create_dish(db: Session, data: schemas.DishCreate) -> models.Dish:
+    dish = models.Dish(name=data.name)
+    _set_dish_ingredients(db, dish, data.ingredients)
     db.add(dish)
     db.commit()
     db.refresh(dish)
     return dish
+
+
+def update_dish(db: Session, dish: models.Dish, data: schemas.DishUpdate) -> models.Dish:
+    if data.name is not None:
+        dish.name = data.name
+    if data.ingredients is not None:
+        _set_dish_ingredients(db, dish, data.ingredients)
+    db.commit()
+    db.refresh(dish)
+    return dish
+
+
+def delete_dish(db: Session, dish: models.Dish) -> None:
+    db.delete(dish)
+    db.commit()
 
 
 # ---------- Матрица аллергенов ----------
@@ -101,6 +167,10 @@ def get_wastage(db: Session) -> list[models.WastageEntry]:
     return list(db.scalars(select(models.WastageEntry).order_by(models.WastageEntry.date.desc())))
 
 
+def get_wastage_entry(db: Session, entry_id: int) -> models.WastageEntry | None:
+    return db.get(models.WastageEntry, entry_id)
+
+
 def create_wastage_entry(db: Session, data: schemas.WastageCreate) -> models.WastageEntry:
     ingredient = db.get(models.Ingredient, data.ingredient_id)
     if ingredient is None:
@@ -116,3 +186,28 @@ def create_wastage_entry(db: Session, data: schemas.WastageCreate) -> models.Was
     db.commit()
     db.refresh(entry)
     return entry
+
+
+def update_wastage_entry(
+    db: Session,
+    entry: models.WastageEntry,
+    data: schemas.WastageUpdate,
+) -> models.WastageEntry:
+    if data.ingredient_id is not None:
+        ingredient = db.get(models.Ingredient, data.ingredient_id)
+        if ingredient is None:
+            raise ValueError(f"Ингредиент {data.ingredient_id} не найден")
+        entry.ingredient = ingredient
+        entry.unit = ingredient.unit
+    for field in ("qty", "reason", "date"):
+        value = getattr(data, field)
+        if value is not None:
+            setattr(entry, field, value)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+def delete_wastage_entry(db: Session, entry: models.WastageEntry) -> None:
+    db.delete(entry)
+    db.commit()
